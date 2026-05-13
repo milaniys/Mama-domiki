@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Мамины домики — бронирование</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 12px;
+            font-size: 16px;
+        }
+        /* Крупные элементы для удобства */
+        .container {
+            max-width: 100%;
+            overflow-x: auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 8px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            min-width: 700px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 12px 6px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        th {
+            background: #2c3e50;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            font-size: 15px;
+        }
+        .weekend { background-color: #c0392b; color: white; }
+        .free { background-color: #b7e4c7; }
+        .occupied { background-color: #f4acb7; }
+        .pending { background-color: #ffe08c; }
+        .today-cell { box-shadow: 0 0 0 3px #2ecc71; font-weight: bold; }
+        .house-col {
+            font-weight: bold;
+            background: #fff3e0;
+            position: sticky;
+            left: 0;
+            min-width: 110px;
+            font-size: 16px;
+        }
+        .status-badge {
+            font-weight: 700;
+            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: 30px;
+            background: rgba(0,0,0,0.08);
+            display: inline-block;
+        }
+        .service-badge {
+            font-size: 12px;
+            background: #ffd966;
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 30px;
+            margin-top: 5px;
+        }
+        .price-badge {
+            font-size: 13px;
+            font-weight: bold;
+            background: rgba(255,255,200,0.9);
+            margin-top: 5px;
+            padding: 3px 8px;
+            border-radius: 30px;
+            display: inline-block;
+        }
+        .remainder-badge {
+            font-size: 15px;
+            font-weight: bold;
+            background: #ffcccc;
+            margin-top: 5px;
+            padding: 4px 10px;
+            border-radius: 30px;
+            display: inline-block;
+            color: #9e2a2a;
+        }
+        .insta-link, .phone-link {
+            font-size: 12px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 4px;
+            padding: 3px 8px;
+            border-radius: 30px;
+            background: rgba(255,255,240,0.95);
+        }
+        .insta-link { color: #405de6; }
+        .phone-link { color: #25d366; }
+        
+        /* Сегодняшние заезды */
+        .today-guests {
+            background: #27ae60;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 60px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        /* Месяцы */
+        .month-selector {
+            background: white;
+            padding: 12px;
+            border-radius: 60px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        .month-btn {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .month-active { background: #e67e22; }
+        
+        /* Экспорт/импорт */
+        .toolbar {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .toolbar button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        /* Модалка */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-card {
+            background: white;
+            border-radius: 40px;
+            padding: 24px;
+            width: 92%;
+            max-width: 380px;
+            text-align: center;
+        }
+        .modal-card h3 {
+            font-size: 22px;
+            margin: 0 0 15px 0;
+        }
+        .main-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 20px 0;
+        }
+        .main-btn {
+            padding: 16px;
+            border: none;
+            border-radius: 60px;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .btn-free { background: #b7e4c7; color: #2d6a4f; }
+        .btn-pending { background: #ffe08c; color: #7d5d00; }
+        .btn-occupied { background: #f4acb7; color: #9e2a2a; }
+        
+        .service-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        .service-btn {
+            background: #e9ecef;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 60px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .service-active {
+            background: #ffb74d;
+            font-weight: bold;
+        }
+        .guest-selector {
+            margin: 15px 0;
+            text-align: left;
+        }
+        .guest-selector label {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        select {
+            margin-left: 12px;
+            padding: 10px;
+            border-radius: 40px;
+            font-size: 16px;
+            width: 100px;
+        }
+        input {
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0;
+            border-radius: 60px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            text-align: center;
+        }
+        .close-modal {
+            margin-top: 20px;
+            background: #27ae60;
+            color: white;
+            padding: 14px;
+            border-radius: 60px;
+            width: 100%;
+            font-weight: bold;
+            font-size: 18px;
+            border: none;
+            cursor: pointer;
+        }
+        .copy-btn {
+            background: #2980b9;
+            color: white;
+            padding: 12px;
+            border-radius: 60px;
+            width: 100%;
+            font-size: 16px;
+            margin-bottom: 12px;
+            border: none;
+            cursor: pointer;
+        }
+        .total-price {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 50px;
+        }
+        .remainder {
+            font-size: 16px;
+            margin-top: 8px;
+            color: #c0392b;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h2 style="text-align:center; font-size:26px; margin:0 0 10px 0;">🏕️ МАМИНЫ ДОМИКИ</h2>
+
+<div class="today-guests" id="todayGuests">📅 Загрузка...</div>
+
+<div class="month-selector" id="monthSelector"></div>
+
+<div class="toolbar">
+    <button onclick="exportBookings()">💾 Сохранить всё</button>
+    <button onclick="importBookings()">📂 Восстановить</button>
+</div>
+
+<div class="container">
+    <table id="bookingTable">
+        <thead id="tableHeader"></thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</div>
+
+<div id="modal" class="modal">
+    <div class="modal-card">
+        <h3 id="modalTitle">Бронирование</h3>
+        
+        <button class="copy-btn" id="copyMessageBtn">📋 Скопировать сообщение клиенту</button>
+        
+        <div class="main-buttons">
+            <button class="main-btn btn-free" id="btnFree">🟢 СВОБОДНО</button>
+            <button class="main-btn btn-pending" id="btnPending">⚪ ОЖИДАНИЕ</button>
+            <button class="main-btn btn-occupied" id="btnOccupied">🔴 ЗАНЯТО</button>
+        </div>
+        
+        <div class="service-buttons">
+            <button class="service-btn" id="servNone">❌ Нет</button>
+            <button class="service-btn" id="servBanya">🛀 Баня (150)</button>
+            <button class="service-btn" id="servKupel">💧 Купель (150)</button>
+            <button class="service-btn" id="servBoth">🔥 Баня+Купель (250)</button>
+        </div>
+        
+        <div class="guest-selector">
+            <label>👥 Гостей: </label>
+            <select id="guestCount">
+                <option value="2">2 (база)</option>
+                <option value="3">3 (+50)</option>
+                <option value="4">4 (+100)</option>
+                <option value="5">5 (+150)</option>
+                <option value="6">6 (+200)</option>
+            </select>
+        </div>
+        
+        <input type="text" id="instaInput" list="clientsList" placeholder="Instagram аккаунт" autocomplete="off">
+        <input type="tel" id="phoneInput" list="clientsList" placeholder="Телефон (нажми для звонка)" autocomplete="off">
+        <datalist id="clientsList"></datalist>
+        
+        <div class="total-price" id="totalPriceDisplay">💰 Сумма: 0 Br</div>
+        <div class="remainder" id="remainderDisplay"></div>
+        
+        <button class="close-modal" id="closeModalBtn">✅ СОХРАНИТЬ</button>
+    </div>
+</div>
+
+<script>
+    const HOUSES = ['Домик №1', 'Домик №2'];
+    const PREPAYMENT = 100;
+    const BANK_CARD = { formatted: '9112 3801 7346 8689', expiry: '04/29' };
+    
+    const MONTHS = { 6: 'ИЮНЬ', 7: 'ИЮЛЬ', 8: 'АВГУСТ', 9: 'СЕНТЯБРЬ', 10: 'ОКТЯБРЬ', 11: 'НОЯБРЬ', 12: 'ДЕКАБРЬ' };
+    const MONTH_DAYS = { 6:30, 7:31, 8:31, 9:30, 10:31, 11:30, 12:31 };
+    
+    let currentMonth = 6;
+    let allData = {};
+    let currentHouse = null, currentDay = null;
+    let currentService = 'none';
+    
+    function getDayOfWeek(month, day) { return new Date(2026, month-1, day).getDay(); }
+    function getBasePrice(month, day) { return ([5,6].includes(getDayOfWeek(month, day))) ? 320 : 280; }
+    function getServicePrice(s) { return s === 'banya' ? 150 : s === 'kupel' ? 150 : s === 'both' ? 250 : 0; }
+    function getExtraPrice(g) { return g <= 2 ? 0 : (g-2)*50; }
+    function calcTotal(month, day, s, g) { return getBasePrice(month, day) + getServicePrice(s) + getExtraPrice(g); }
+    
+    function getAllClients() {
+        const clients = new Map();
+        for (let m in allData) {
+            for (let h in allData[m]) {
+                for (let d in allData[m][h]) {
+                    const b = allData[m][h][d];
+                    if (b.insta || b.phone) {
+                        const key = b.insta || b.phone;
+                        if (!clients.has(key)) {
+                            clients.set(key, { insta: b.insta, phone: b.phone, service: b.service, guests: b.guests });
+                        }
+                    }
+                }
+            }
+        }
+        return Array.from(clients.values());
+    }
+    
+    function updateClientsDatalist() {
+        const clients = getAllClients();
+        const datalist = document.getElementById('clientsList');
+        datalist.innerHTML = '';
+        clients.forEach(c => {
+            if (c.insta) { const opt = document.createElement('option'); opt.value = c.insta; datalist.appendChild(opt); }
+            if (c.phone) { const opt = document.createElement('option'); opt.value = c.phone; datalist.appendChild(opt); }
+        });
+    }
+    
+    function fillFromClient(value) {
+        for (let m in allData) {
+            for (let h in allData[m]) {
+                for (let d in allData[m][h]) {
+                    const b = allData[m][h][d];
+                    if (b.insta === value || b.phone === value) {
+                        if (b.service && b.service !== 'none') {
+                            currentService = b.service;
+                            updateServiceButtons(currentService);
+                        }
+                        document.getElementById('guestCount').value = b.guests || 2;
+                        updateTotalDisplay();
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    
+    function updateTodayGuests() {
+        const today = new Date();
+        if (today.getFullYear() !== 2026) { document.getElementById('todayGuests').innerHTML = '📅 Сегодня: не в 2026 году'; return; }
+        const todayMonth = today.getMonth() + 1;
+        const todayDay = today.getDate();
+        let guests = [];
+        for (let h=0; h<HOUSES.length; h++) {
+            const b = allData[todayMonth]?.[h]?.[todayDay];
+            if (b && b.status === 'occupied' && (b.insta || b.phone)) {
+                guests.push(`${b.insta || b.phone} (${HOUSES[h]})`);
+            }
+        }
+        if (guests.length === 0) {
+            document.getElementById('todayGuests').innerHTML = '🏠 Сегодня заездов нет';
+        } else {
+            document.getElementById('todayGuests').innerHTML = '🏠 Сегодня заезжают: ' + guests.join(', ');
+        }
+    }
+    
+    function initMonth(month) {
+        if (!allData[month]) {
+            allData[month] = {};
+            for (let h=0; h<HOUSES.length; h++) {
+                allData[month][h] = {};
+                for (let d=1; d<=MONTH_DAYS[month]; d++) {
+                    allData[month][h][d] = { status: 'free', insta: '', phone: '', service: 'none', guests: 2 };
+                }
+            }
+        }
+        saveToLocal();
+    }
+    
+    function saveToLocal() {
+        localStorage.setItem('mamaDomiki', JSON.stringify(allData));
+        localStorage.setItem('mamaMonth', currentMonth);
+    }
+    
+    function loadFromLocal() {
+        const saved = localStorage.getItem('mamaDomiki');
+        if (saved) allData = JSON.parse(saved);
+        const savedMonth = localStorage.getItem('mamaMonth');
+        if (savedMonth) currentMonth = parseInt(savedMonth);
+        if (!allData[currentMonth]) initMonth(currentMonth);
+        renderMonthSelector();
+        renderTable();
+        updateTodayGuests();
+    }
+    
+    function renderMonthSelector() {
+        const container = document.getElementById('monthSelector');
+        container.innerHTML = '';
+        for (let m in MONTHS) {
+            const btn = document.createElement('button');
+            btn.textContent = MONTHS[m];
+            btn.classList.add('month-btn');
+            if (parseInt(m) === currentMonth) btn.classList.add('month-active');
+            btn.onclick = () => { currentMonth = parseInt(m); if(!allData[currentMonth]) initMonth(currentMonth); saveToLocal(); renderMonthSelector(); renderTable(); updateTodayGuests(); };
+            container.appendChild(btn);
+        }
+    }
+    
+    function goToToday() {
+        const t = new Date();
+        if (t.getFullYear() !== 2026) return;
+        if (currentMonth !== t.getMonth()+1) { currentMonth = t.getMonth()+1; renderMonthSelector(); }
+        renderTable();
+        setTimeout(() => {
+            const cell = document.querySelector(`td[data-day="${t.getDate()}"]`);
+            if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    }
+    
+    function renderHeader() {
+        const thead = document.getElementById('tableHeader');
+        thead.innerHTML = '';
+        let row = document.createElement('tr');
+        row.appendChild(document.createElement('th')).textContent = 'Домик';
+        for (let d=1; d<=MONTH_DAYS[currentMonth]; d++) {
+            let th = document.createElement('th');
+            th.textContent = d;
+            if ([0,6].includes(getDayOfWeek(currentMonth, d))) th.classList.add('weekend');
+            row.appendChild(th);
+        }
+        thead.appendChild(row);
+    }
+    
+    function getServiceText(s) {
+        if (s === 'banya') return '🛀 Баня';
+        if (s === 'kupel') return '💧 Купель';
+        if (s === 'both') return '🔥 Баня+Купель';
+        return '';
+    }
+    
+    function renderTable() {
+        renderHeader();
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        const today = new Date();
+        const isTodayMonth = (today.getFullYear()===2026 && today.getMonth()+1 === currentMonth);
+        const todayNum = isTodayMonth ? today.getDate() : null;
+        
+        for (let h=0; h<HOUSES.length; h++) {
+            const row = document.createElement('tr');
+            const houseCell = document.createElement('td');
+            houseCell.className = 'house-col';
+            houseCell.textContent = HOUSES[h];
+            row.appendChild(houseCell);
+            for (let d=1; d<=MONTH_DAYS[currentMonth]; d++) {
+                const cell = document.createElement('td');
+                const b = allData[currentMonth][h][d];
+                let cls = '', txt = '', sym = '';
+                if (b.status === 'free') { cls = 'free'; txt = 'свободно'; sym = '🟢'; }
+                else if (b.status === 'pending') { cls = 'pending'; txt = 'ОЖИДАНИЕ'; sym = '⚪'; }
+                else { cls = 'occupied'; txt = 'ЗАНЯТО'; sym = '🔴'; }
+                cell.className = cls;
+                if (todayNum === d) cell.classList.add('today-cell');
+                cell.setAttribute('data-day', d);
+                let html = `<div class="status-badge">${sym} ${txt}</div>`;
+                if (b.status !== 'free') {
+                    if (b.service !== 'none') html += `<div class="service-badge">${getServiceText(b.service)}</div>`;
+                    let total = calcTotal(currentMonth, d, b.service, b.guests);
+                    let rem = total - PREPAYMENT;
+                    html += `<div class="price-badge">💰 ${total} Br</div>`;
+                    if (b.status === 'occupied') html += `<div class="remainder-badge">💳 ОСТАТОК: ${rem} Br</div>`;
+                    html += `<div>👥 ${b.guests} чел.</div>`;
+                }
+                if (b.insta) html += `<div><a class="insta-link" href="https://instagram.com/${b.insta.replace('@','')}" target="_blank">📷 ${b.insta}</a></div>`;
+                if (b.phone) html += `<div><a class="phone-link" href="tel:${b.phone}">📞 ${b.phone}</a></div>`;
+                cell.innerHTML = html;
+                cell.onclick = () => openModal(h, d);
+                row.appendChild(cell);
+            }
+            tbody.appendChild(row);
+        }
+    }
+    
+    function openModal(house, day) {
+        currentHouse = house;
+        currentDay = day;
+        const b = allData[currentMonth][house][day];
+        document.getElementById('modalTitle').innerHTML = `${HOUSES[house]} — ${day} ${MONTHS[currentMonth]}`;
+        document.getElementById('instaInput').value = b.insta || '';
+        document.getElementById('phoneInput').value = b.phone || '';
+        document.getElementById('guestCount').value = b.guests || 2;
+        currentService = b.service || 'none';
+        updateServiceButtons(currentService);
+        updateTotalDisplay();
+        updateClientsDatalist();
+        document.getElementById('modal').style.display = 'flex';
+        
+        const instaInput = document.getElementById('instaInput');
+        const phoneInput = document.getElementById('phoneInput');
+        instaInput.onchange = () => { if(instaInput.value) fillFromClient(instaInput.value); };
+        phoneInput.onchange = () => { if(phoneInput.value) fillFromClient(phoneInput.value); };
+    }
+    
+    function updateServiceButtons(s) {
+        ['servNone','servBanya','servKupel','servBoth'].forEach(id => document.getElementById(id).classList.remove('service-active'));
+        if (s === 'none') document.getElementById('servNone').classList.add('service-active');
+        if (s === 'banya') document.getElementById('servBanya').classList.add('service-active');
+        if (s === 'kupel') document.getElementById('servKupel').classList.add('service-active');
+        if (s === 'both') document.getElementById('servBoth').classList.add('service-active');
+        currentService = s;
+        updateTotalDisplay();
+    }
+    
+    function updateTotalDisplay() {
+        if (currentDay === null) return;
+        const g = parseInt(document.getElementById('guestCount').value);
+        const total = calcTotal(currentMonth, currentDay, currentService, g);
+        document.getElementById('totalPriceDisplay').innerHTML = `💰 Итого: ${total} Br`;
+        document.getElementById('remainderDisplay').innerHTML = `💳 Остаток: ${total-PREPAYMENT} Br (предоплата ${PREPAYMENT} Br)`;
+    }
+    
+    function saveAndClose() {
+        if (currentHouse === null) return;
+        const insta = document.getElementById('instaInput').value.trim();
+        const phone = document.getElementById('phoneInput').value.trim();
+        const guests = parseInt(document.getElementById('guestCount').value);
+        const service = currentService;
+        const status = allData[currentMonth][currentHouse][currentDay].status;
+        allData[currentMonth][currentHouse][currentDay] = { status, insta, phone, service, guests };
+        saveToLocal();
+        renderTable();
+        updateTodayGuests();
+        document.getElementById('modal').style.display = 'none';
+        currentHouse = null;
+    }
+    
+    function setStatus(status) {
+        if (currentHouse !== null) {
+            allData[currentMonth][currentHouse][currentDay].status = status;
+            saveToLocal();
+            renderTable();
+            updateTodayGuests();
+            document.getElementById('modal').style.display = 'none';
+            if (status === 'occupied') {
+                const message = getMessageText();
+                navigator.clipboard.writeText(message);
+                alert('✅ Бронь сохранена! Сообщение для клиента скопировано.');
+            }
+            currentHouse = null;
+        }
+    }
+    
+    function getMessageText() {
+        const b = allData[currentMonth][currentHouse][currentDay];
+        const total = calcTotal(currentMonth, currentDay, b.service, b.guests);
+        const serviceText = getServiceText(b.service) || 'без услуг';
+        return `🏕️ Бронь: ${HOUSES[currentHouse]}, ${currentDay} ${MONTHS[currentMonth]}\n👥 ${b.guests} человек\n🧖 ${serviceText}\n💰 Итого: ${total} Br\n💵 Предоплата: ${PREPAYMENT} Br\n💳 Остаток: ${total-PREPAYMENT} Br`;
+    }
+    
+    document.getElementById('btnFree').onclick = () => setStatus('free');
+    document.getElementById('btnPending').onclick = () => setStatus('pending');
+    document.getElementById('btnOccupied').onclick = () => setStatus('occupied');
+    document.getElementById('copyMessageBtn').onclick = () => { if(currentHouse !== null) { navigator.clipboard.writeText(getMessageText()); alert('✅ Сообщение скопировано'); } };
+    document.getElementById('servNone').onclick = () => updateServiceButtons('none');
+    document.getElementById('servBanya').onclick = () => updateServiceButtons('banya');
+    document.getElementById('servKupel').onclick = () => updateServiceButtons('kupel');
+    document.getElementById('servBoth').onclick = () => updateServiceButtons('both');
+    document.getElementById('guestCount').onchange = updateTotalDisplay;
+    document.getElementById('closeModalBtn').onclick = saveAndClose;
+    
+    window.exportBookings = () => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(allData)], {type: 'application/json'}));
+        a.download = `mami_domiki_${Date.now()}.json`;
+        a.click();
+        alert('✅ Все брони сохранены в файл!');
+    };
+    window.importBookings = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.onchange = e => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    allData = JSON.parse(ev.target.result);
+                    if (!allData[currentMonth]) initMonth(currentMonth);
+                    saveToLocal();
+                    renderTable();
+                    updateTodayGuests();
+                    alert('✅ Брони восстановлены!');
+                } catch(err) { alert('Ошибка: не тот файл'); }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    };
+    
+    loadFromLocal();
+    if (!allData[currentMonth]) initMonth(currentMonth);
+    renderTable();
+    goToToday();
+</script>
+</body>
+</html>
